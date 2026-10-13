@@ -59,7 +59,7 @@ img{max-width:100%}.wrap,.rc,.dish,.drink{min-width:0;overflow-wrap:anywhere}inp
  <div class="field"><label for="nm">Your Name / اسمك</label><input id="nm" autocomplete="given-name" maxlength="40" placeholder="…"></div>
  <div id="m1"></div>
  <button class="btn" onclick="toDrinks()">Next / التالي</button>
- <button class="back" style="display:block;margin:14px auto 0" onclick="go('receipt')">View family receipt / شوف الطلبات</button>
+ <button class="back" style="display:block;margin:14px auto 0" onclick="go('receipt')">View my orders / شوف طلباتي</button>
 </div></div>
 
 <div id="drinks" class="page"><div class="wrap">
@@ -87,7 +87,9 @@ const DISHES=[
 {id:'veg',en:'Open Vegetable & Cheese Omelette',ar:'أومليت مفتوح بالخضار والجبنة',de:'An open-faced omelette cooked with colorful red, yellow, and green bell peppers and hot chili peppers, finished with a light sprinkle of grated cheese.',da:'أومليت مفتوح مطبوخ بالفلفل الألوان الأحمر والأصفر والأخضر والفلفل الحراق، وعليه رشة خفيفة من الجبنة المبشورة.',se:'Oven-baked potato wedges, fresh side salad, and toasted brown wholegrain bread.',sa:'بطاطس ويدجز مخبوزة في الفرن وسلطة طازجة وعيش أسمر محمص.'},{"id": "mushroom", "en": "Mushroom, Vegetable & Cheese Quesadilla", "ar": "كاساديا بالبيض والمشروم والخضار والجبنة", "de": "Golden toasted tortilla wedges filled with scrambled egg, sautéed mushrooms, fresh vegetables, and melted cheese, served with oven-baked potato wedges and a fresh side salad.", "da": "كاساديا من التورتيلا المحمصة دهبي، محشوة بالبيض والمشروم المتشوح والخضار والجبنة السايحة، وتتقدم مع بطاطس ويدجز مخبوزة في الفرن وسلطة طازجة.", "se": "Oven-baked potato wedges and a fresh side salad of lettuce, cherry tomatoes, thinly sliced onion, and light dressing.", "sa": "بطاطس ويدجز مخبوزة في الفرن وسلطة طازجة من الخس والطماطم الشيري والبصل مع دريسينج خفيف."},{"id": "chicken", "en": "Chicken Strips & Cheese Quesadilla", "ar": "كاساديا ستريبس الفراخ بالجبنة والصوصات", "de": "Golden toasted tortilla wedges filled with tender cooked chicken strips, melted cheese, and creamy savory sauces, served with oven-baked potato wedges and a fresh side salad.", "da": "كاساديا من التورتيلا المحمصة دهبي، محشوة بستريبس فراخ مستوية وطرية مع الجبنة السايحة ومجموعة من الصوصات الكريمية، وتتقدم مع بطاطس ويدجز مخبوزة في الفرن وسلطة طازجة.", "se": "Oven-baked potato wedges and a fresh side salad of lettuce, cherry tomatoes, thinly sliced onion, and light dressing.", "sa": "بطاطس ويدجز مخبوزة في الفرن وسلطة طازجة من الخس والطماطم الشيري والبصل مع دريسينج خفيف."}];
 const DRINKS=[{id:'tea',en:'Black Tea',ar:'شاي أسود'},{id:'turkish',en:'Turkish-Style Coffee',ar:'قهوة كشري'},{id:'nescafe',en:'Nescafé',ar:'نسكافيه'},{id:'juice',en:'Fresh Juice',ar:'عصير فريش'},{id:'none',en:'No Extra Drink',ar:'مش عايز مشروب إضافي',rc:'بدون مشروب إضافي'}];
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let dish=null,drink=null,saving=false,attemptId=null,orders=[],col=null;
+const CHEF='nourhanmuhammadd5567@gmail.com';
+let dish=null,drink=null,saving=false,attemptId=null,orders=[],col=null,local=false;
+try{orders=JSON.parse(localStorage.getItem('fbOrders')||'[]')}catch(e){orders=[]}
 function go(p){document.querySelectorAll('.page').forEach(e=>e.classList.toggle('on',e.id==p));scrollTo(0,0)}
 $('#dishes').innerHTML=DISHES.map((d,i)=>`<div class="dish" id="d-${d.id}" onclick="pickDish('${d.id}')"><img src="${IMG['photo_'+d.id]}" alt="${esc(d.en)}"><div class="b"><div class="no">0${i+1}</div><h3 class="serif">${d.en}</h3><p>${d.de}</p><p class="ar" style="text-align:center">${d.ar}<br>${d.da}</p>${d.se?`<div class="sv"><b>Served with</b><br>${d.se}<div class="ar" style="text-align:center">${d.sa}</div></div>`:''}<div class="pick">Select / اختار</div></div></div>`).join('');
 $('#dr').innerHTML=DRINKS.map(d=>`<div class="drink" id="k-${d.id}" onclick="pickDrink('${d.id}')"><div class="serif">${d.en}</div><div class="ar" style="text-align:center">${d.ar}</div></div>`).join('');
@@ -98,26 +100,30 @@ function toDrinks(){const n=$('#nm').value.trim();
  const d=DISHES.find(x=>x.id==dish);$('#sum').innerHTML=`<b>${esc(n)}</b> — ${d.en}<div class="ar" style="text-align:center">${d.ar}</div>`;$('#cf').disabled=!drink;go('drinks')}
 async function confirmOrder(){
  if(saving)return;if(!drink){$('#m2').innerHTML='<div class="msg err">Pick a drink or “No Extra Drink” / اختار مشروب أو بدون مشروب</div>';return}
- if(!col){$('#m2').innerHTML='<div class="msg err">Shared storage isn’t available right now, so the order was NOT saved. Please reopen the link and try again.<div class="ar" style="text-align:center">الطلب ماتحفظش. افتح اللينك تاني وجرب.</div></div>';return}
- saving=true;$('#cf').disabled=true;$('#cf').textContent='Saving… / بنحفظ';
+  saving=true;$('#cf').disabled=true;$('#cf').textContent='Saving… / بنحفظ';
  attemptId=attemptId||('o'+Date.now()+Math.random().toString(36).slice(2,7));
- try{await col.doc(attemptId).set({name:$('#nm').value.trim().slice(0,40),dish,drink,ts:Date.now()});
+ try{const rec={name:$('#nm').value.trim().slice(0,40),dish,drink,ts:Date.now()};
+  if(col){await col.doc(attemptId).set(rec)}else{
+   const dd=DISHES.find(x=>x.id==dish),kk=DRINKS.find(x=>x.id==drink);
+   const r=await fetch('https://formsubmit.co/ajax/'+CHEF,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({_subject:'Breakfast order: '+rec.name,_captcha:'false',_template:'table',Name:rec.name,Dish:dd.en+' / '+dd.ar,Drink:kk.en+' / '+(kk.rc||kk.ar)})});
+   const j=await r.json();if(!r.ok||String(j.success)!=='true')throw new Error('send');
+   rec.id=attemptId;orders.push(rec);try{localStorage.setItem('fbOrders',JSON.stringify(orders))}catch(e){}render()}
   attemptId=null;dish=null;drink=null;$('#nm').value='';pickDish(null);DRINKS.forEach(d=>$('#k-'+d.id).classList.remove('sel'));$('#m2').innerHTML='';go('receipt');
- }catch(e){$('#m2').innerHTML='<div class="msg err">Couldn’t save your order. Check your connection and tap confirm again.<div class="ar" style="text-align:center">مافيش حفظ. اتأكد من النت وجرب تاني.</div></div>'}
+ }catch(e){$('#m2').innerHTML='<div class="msg err">Couldn’t send your order. Check your connection and tap confirm again.<div class="ar" style="text-align:center">مافيش حفظ. اتأكد من النت وجرب تاني.</div></div>'}
  saving=false;$('#cf').disabled=false;$('#cf').textContent='Confirm My Order / تأكيد الطلب'}
 let ask=null,err=null;
 async function delOrder(id){try{await col.doc(id).delete();ask=null;err=null}catch(e){err=id}render()}
 async function setReady(id){try{await col.doc(id).update({ready:true});err=null}catch(e){err=id;render()}}
 function newOrder(){dish=null;drink=null;go('menu')}
 function render(){const L=$('#list');
- if(!orders.length){L.innerHTML='<div class="empty"><div class="script" style="font-size:30px">No orders yet</div><p>Be the first to place a breakfast order!</p><p class="ar" style="text-align:center">لسه مفيش طلبات. كن أول واحد يطلب!</p></div>';return}
+ if(!orders.length){L.innerHTML='<div class="empty"><div class="script" style="font-size:30px">No orders yet</div><p>Choose your breakfast and send your order!</p><p class="ar" style="text-align:center">لسه مفيش طلبات. كن أول واحد يطلب!</p></div>';return}
  L.innerHTML=orders.map((o,i)=>{const d=DISHES.find(x=>x.id==o.dish)||{en:'?',ar:''},k=DRINKS.find(x=>x.id==o.drink)||DRINKS[4];
  const t=new Date(o.ts).toLocaleString([], {weekday:'short',hour:'numeric',minute:'2-digit'});
  return `<div class="o"><div class="n">ORDER ${String(i+1).padStart(2,'0')}</div><div class="nm serif">${esc(o.name)}</div>
  <div class="row"><small>Dish</small>${d.en}<div class="ar">الطبق: ${d.ar}</div></div>
- <div class="row"><small>Drink</small>${k.en}<div class="ar">المشروب: ${k.rc||k.ar}</div></div><div class="t">${t}</div>${o.ready?'<div class="rdy">✓ READY / جهز</div>':(ask==o.id?`<div class="act"><button class="ok" onclick="delOrder('${o.id}')">Yes, cancel / أيوه إلغي</button><button onclick="ask=null;render()">Keep / لأ</button></div>`:`<div class="act"><button onclick="ask='${o.id}';render()">Cancel / إلغاء</button><button onclick="setReady('${o.id}')">Ready / جهز ✓</button></div>`)}${err==o.id?'<div class="msg err">Couldn’t update. Try again / جرب تاني</div>':''}</div>`}).join('')}
+ <div class="row"><small>Drink</small>${k.en}<div class="ar">المشروب: ${k.rc||k.ar}</div></div><div class="t">${t}</div>${local?'<div class="rdy">✓ SENT TO THE KITCHEN / اتبعت للمطبخ</div>':o.ready?'<div class="rdy">✓ READY / جهز</div>':(ask==o.id?`<div class="act"><button class="ok" onclick="delOrder('${o.id}')">Yes, cancel / أيوه إلغي</button><button onclick="ask=null;render()">Keep / لأ</button></div>`:`<div class="act"><button onclick="ask='${o.id}';render()">Cancel / إلغاء</button><button onclick="setReady('${o.id}')">Ready / جهز ✓</button></div>`)}${err==o.id?'<div class="msg err">Couldn’t update. Try again / جرب تاني</div>':''}</div>`}).join('')}
 render();
-(async()=>{try{const db=await claude.use('db');if(!db){$('#live').textContent='Live sharing unavailable in this view.';return}
+(async()=>{try{if(typeof claude==='undefined'){local=true;$('#live').textContent='';render();return}const db=await claude.use('db');if(!db){$('#live').textContent='Live sharing unavailable in this view.';local=true;render();return}
  col=db.collection('orders');$('#live').textContent='Live — updates automatically / بيتحدث لوحده';
  col.orderBy('ts').onSnapshot(s=>{orders=s.docs.map(d=>Object.assign({},d.data(),{id:d.id}));orders.sort((a,b)=>a.ts-b.ts);render()},e=>{$('#live').textContent='Live updates interrupted / التحديث وقف'})}catch(e){$('#live').textContent='Live sharing unavailable.'}})();
 </script></body></html>
